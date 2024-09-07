@@ -1,9 +1,11 @@
-import socket  # noqa: F401
+import socket
 
 
 def main():
     server_socket = socket.create_server(("localhost", 4221), reuse_port=True)
-    server_socket.accept()  # wait for client
+    client_socket, _ = server_socket.accept()
+    client_socket.sendall(b"HTTP/1.1 200 OK\r\n\r\n")
+    client_socket.close()
 
 
 if __name__ == "__main__":
