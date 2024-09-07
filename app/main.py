@@ -9,6 +9,13 @@ def handle_request(client_socket: socket.socket):
 
     if method == "GET" and path == "/":
         client_socket.sendall(b"HTTP/1.1 200 OK\r\n\r\n")
+
+    elif method == "GET" and path.startswith("/echo"):
+        message = path.split("/echo/")[1]
+        client_socket.sendall(
+            f"HTTP/1.1 200 OK\r\nContent-Length: {len(message)}\r\nContent-Type: text/plain\r\n\r\n{message}".encode()
+        )
+
     else:
         client_socket.sendall(b"HTTP/1.1 404 Not Found\r\n\r\n")
 
