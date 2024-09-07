@@ -1,4 +1,5 @@
 import socket
+import threading
 
 
 def parse_headers(request: str) -> dict:
@@ -45,7 +46,8 @@ def main():
 
     while True:
         client_socket, _ = server_socket.accept()
-        handle_request(client_socket)
+        client_handler = threading.Thread(target=handle_request, args=(client_socket,))
+        client_handler.start()
 
 
 if __name__ == "__main__":
