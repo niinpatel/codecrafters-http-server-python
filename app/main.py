@@ -1,4 +1,6 @@
+import os
 import socket
+import sys
 import threading
 
 
@@ -34,7 +36,19 @@ def handle_request(client_socket: socket.socket):
         client_socket.sendall(
             f"HTTP/1.1 200 OK\r\nContent-Length: {len(user_agent)}\r\nContent-Type: text/plain\r\n\r\n{user_agent}".encode()
         )
+    elif method == "GET" and path.startswith("/files/"):
+        file_name = path.split("/files/")[1]
+        directory = sys.argv[2]
+        file_path = os.path.join(directory, file_name)
 
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as file:
+                content = file.read()
+                client_socket.sendall(
+                    f"HTTP/1.1 200 OK\r\nContent-Length: {len(content)}\r\nContent-Type: application/octet-stream\r\n\r\n{content.decode()}".encode()
+                )
+        else:
+            client_socket.sendall(b"HTTP/1.1 404 Not Found\r\n\r\n")
     else:
         client_socket.sendall(b"HTTP/1.1 404 Not Found\r\n\r\n")
 
