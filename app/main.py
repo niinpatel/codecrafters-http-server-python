@@ -16,6 +16,20 @@ def parse_headers(request: str) -> dict:
     return headers
 
 
+def construct_response(status_code: int, body: str, headers: dict) -> str:
+    status_messages = {
+        200: "OK",
+        201: "Created",
+        404: "Not Found",
+    }
+
+    status_line = f"HTTP/1.1 {status_code} {status_messages[status_code]}\r\n"
+    headers_str = "".join([f"{key}: {value}\r\n" for key, value in headers.items()])
+    headers_str += f"Content-Length: {len(body.encode())}\r\n"
+
+    return f"{status_line}{headers_str}\r\n{body}".encode()
+
+
 def handle_request(client_socket: socket.socket):
     request = client_socket.recv(1024)
 
@@ -32,17 +46,29 @@ def handle_request(client_socket: socket.socket):
         if "gzip" in accept_encoding:
             compressed_message = message  # will do later
             client_socket.sendall(
-                f"HTTP/1.1 200 OK\r\nContent-Length: {len(compressed_message)}\r\nContent-Encoding: gzip\r\nContent-Type: text/plain\r\n\r\n{compressed_message.decode()}".encode()
+                construct_response(
+                    200,
+                    compressed_message.decode(),
+                    {"Content-Encoding": "gzip", "Content-Type": "text/plain"},
+                )
             )
         else:
             client_socket.sendall(
-                f"HTTP/1.1 200 OK\r\nContent-Length: {len(message)}\r\nContent-Type: text/plain\r\n\r\n{message.decode()}".encode()
+                construct_response(
+                    200,
+                    message.decode(),
+                    {"Content-Type": "text/plain"},
+                )
             )
 
     elif method == "GET" and path.startswith("/user-agent"):
         user_agent = headers.get("User-Agent", "")
         client_socket.sendall(
-            f"HTTP/1.1 200 OK\r\nContent-Length: {len(user_agent)}\r\nContent-Type: text/plain\r\n\r\n{user_agent}".encode()
+            construct_response(
+                200,
+                user_agent,
+                {"Content-Type": "text/plain"},
+            )
         )
     elif method == "GET" and path.startswith("/files/"):
         file_name = path.split("/files/")[1]
@@ -53,10 +79,20 @@ def handle_request(client_socket: socket.socket):
             with open(file_path, "rb") as file:
                 content = file.read()
                 client_socket.sendall(
-                    f"HTTP/1.1 200 OK\r\nContent-Length: {len(content)}\r\nContent-Type: application/octet-stream\r\n\r\n{content.decode()}".encode()
+                    construct_response(
+                        200,
+                        content.decode(),
+                        {"Content-Type": "application/octet-stream"},
+                    )
                 )
         else:
-            client_socket.sendall(b"HTTP/1.1 404 Not Found\r\n\r\n")
+            client_socket.sendall(
+                construct_response(
+                    404,
+                    "File not found",
+                    {"Content-Type": "text/plain"},
+                )
+            )
     elif method == "POST" and path.startswith("/files/"):
         file_name = path.split("/files/")[1]
         directory = sys.argv[2]
@@ -64,10 +100,22 @@ def handle_request(client_socket: socket.socket):
         request_body = request.decode().split("\r\n\r\n")[1]
         with open(file_path, "wb") as file:
             file.write(request_body.encode())
-        client_socket.sendall(b"HTTP/1.1 201 Created\r\n\r\n")
+        client_socket.sendall(
+            construct_response(
+                201,
+                "File created",
+                {"Content-Type": "text/plain"},
+            )
+        )
 
     else:
-        client_socket.sendall(b"HTTP/1.1 404 Not Found\r\n\r\n")
+        client_socket.sendall(
+            construct_response(
+                404,
+                "Not Found",
+                {"Content-Type": "text/plain"},
+            )
+        )
 
     client_socket.close()
 
