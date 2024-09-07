@@ -49,6 +49,15 @@ def handle_request(client_socket: socket.socket):
                 )
         else:
             client_socket.sendall(b"HTTP/1.1 404 Not Found\r\n\r\n")
+    elif method == "POST" and path.startswith("/files/"):
+        file_name = path.split("/files/")[1]
+        directory = sys.argv[2]
+        file_path = os.path.join(directory, file_name)
+        request_body = request.decode().split("\r\n\r\n")[1]
+        with open(file_path, "wb") as file:
+            file.write(request_body.encode())
+        client_socket.sendall(b"HTTP/1.1 201 Created\r\n\r\n")
+
     else:
         client_socket.sendall(b"HTTP/1.1 404 Not Found\r\n\r\n")
 
