@@ -30,9 +30,10 @@ def handle_request(client_socket: socket.socket):
         accept_encoding = headers.get("Accept-Encoding", "")
         message = path.split("/echo/")[1].encode()
         if "gzip" in accept_encoding:
-            compressed_message = message  # will do later
+            compressed_message = gzip.compress(message)
             client_socket.sendall(
-                f"HTTP/1.1 200 OK\r\nContent-Length: {len(compressed_message)}\r\nContent-Encoding: gzip\r\nContent-Type: text/plain\r\n\r\n{compressed_message.decode()}".encode()
+                f"HTTP/1.1 200 OK\r\nContent-Length: {len(compressed_message)}\r\nContent-Encoding: gzip\r\nContent-Type: text/plain\r\n\r\n".encode()
+                + compressed_message
             )
         else:
             client_socket.sendall(
