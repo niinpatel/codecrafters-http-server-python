@@ -1,3 +1,4 @@
+import gzip
 import os
 import socket
 import sys
@@ -20,18 +21,25 @@ def handle_request(client_socket: socket.socket):
 
     method = request.decode().split(" ")[0]
     path = request.decode().split(" ")[1]
+    headers = parse_headers(request)
 
     if method == "GET" and path == "/":
         client_socket.sendall(b"HTTP/1.1 200 OK\r\n\r\n")
 
     elif method == "GET" and path.startswith("/echo"):
-        message = path.split("/echo/")[1]
-        client_socket.sendall(
-            f"HTTP/1.1 200 OK\r\nContent-Length: {len(message)}\r\nContent-Type: text/plain\r\n\r\n{message}".encode()
-        )
+        accept_encoding = headers.get("Accept-Encoding", "")
+        message = path.split("/echo/")[1].encode()
+        if "gzip" in accept_encoding:
+            compressed_message = message  # will do later
+            client_socket.sendall(
+                f"HTTP/1.1 200 OK\r\nContent-Length: {len(compressed_message)}\r\nContent-Encoding: gzip\r\nContent-Type: text/plain\r\n\r\n{compressed_message.decode()}".encode()
+            )
+        else:
+            client_socket.sendall(
+                f"HTTP/1.1 200 OK\r\nContent-Length: {len(message)}\r\nContent-Type: text/plain\r\n\r\n{message.decode()}".encode()
+            )
 
     elif method == "GET" and path.startswith("/user-agent"):
-        headers = parse_headers(request)
         user_agent = headers.get("User-Agent", "")
         client_socket.sendall(
             f"HTTP/1.1 200 OK\r\nContent-Length: {len(user_agent)}\r\nContent-Type: text/plain\r\n\r\n{user_agent}".encode()
